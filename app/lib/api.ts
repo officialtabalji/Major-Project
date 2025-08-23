@@ -3,7 +3,8 @@ const RAPID_API_KEY = process.env.NEXT_PUBLIC_RAPID_API_KEY || 'your-api-key-her
 const RAPID_API_HOST = 'realty-mole-property-api.p.rapidapi.com';
 
 export interface Property {
-  id: string;
+  _id?: string;
+  id?: string;
   propertyId: string;
   address: {
     line1: string;
@@ -25,7 +26,7 @@ export interface Property {
     monthlyRent: number;
     pricePerSquareFoot: number;
   };
-  listDate: string;
+  listDate: string | Date;
   propertyType: string;
   listingStatus: string;
   photos: string[];
@@ -34,6 +35,23 @@ export interface Property {
   location: {
     latitude: number;
     longitude: number;
+  };
+  host?: {
+    id: string;
+    name: string;
+    email: string;
+  };
+  amenities?: string[];
+  rules?: string[];
+  ratings?: {
+    average: number;
+    count: number;
+    reviews: Array<{
+      userId: string;
+      rating: number;
+      comment: string;
+      date: Date;
+    }>;
   };
 }
 
@@ -46,6 +64,7 @@ export interface SearchParams {
   bedrooms?: number;
   bathrooms?: number;
   limit?: number;
+  page?: number;
 }
 
 export class RealEstateAPI {
@@ -110,6 +129,100 @@ export class RealEstateAPI {
     return this.searchProperties({ minPrice, maxPrice, limit });
   }
 }
+
+// MongoDB API functions
+export async function getProperties(params: SearchParams = {}): Promise<Property[]> {
+  try {
+    // Try to get data from MongoDB API
+    const queryParams = new URLSearchParams();
+    
+    if (params.city) queryParams.append('city', params.city);
+    if (params.state) queryParams.append('state', params.state);
+    if (params.propertyType) queryParams.append('propertyType', params.propertyType);
+    if (params.minPrice) queryParams.append('minPrice', params.minPrice.toString());
+    if (params.maxPrice) queryParams.append('maxPrice', params.maxPrice.toString());
+    if (params.bedrooms) queryParams.append('bedrooms', params.bedrooms.toString());
+    if (params.bathrooms) queryParams.append('bathrooms', params.bathrooms.toString());
+    if (params.limit) queryParams.append('limit', params.limit.toString());
+    if (params.page) queryParams.append('page', params.page.toString());
+
+    const response = await fetch(`/api/properties?${queryParams}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch from MongoDB API');
+    }
+
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data;
+    }
+    
+    throw new Error('Invalid response from MongoDB API');
+    
+  } catch (error) {
+    console.error('Error fetching from MongoDB:', error);
+    
+    // Fallback to RapidAPI
+    try {
+      const rapidApiProperties = await realEstateAPI.searchProperties(params);
+      if (rapidApiProperties.length > 0) {
+        return rapidApiProperties;
+      }
+    } catch (rapidApiError) {
+      console.error('RapidAPI also failed:', rapidApiError);
+    }
+    
+    // Final fallback to mock data
+    return mockProperties.filter(property => {
+      if (params.city && !property.address.city.toLowerCase().includes(params.city!.toLowerCase())) return false;
+      if (params.state && property.address.state !== params.state) return false;
+      if (params.minPrice && property.financial.listPrice < params.minPrice) return false;
+      if (params.maxPrice && property.financial.listPrice > params.maxPrice) return false;
+      if (params.bedrooms && property.physical.bedrooms < params.bedrooms) return false;
+      if (params.bathrooms && property.physical.bathrooms < params.bathrooms) return false;
+      return true;
+    });
+  }
+}
+
+export async function getPropertyById(id: string): Promise<Property | null> {
+  try {
+    // Try to get data from MongoDB API
+    const response = await fetch(`/api/properties/${id}`);
+    
+    if (!response.ok) {
+      throw new Error('Failed to fetch from MongoDB API');
+    }
+
+    const result = await response.json();
+    
+    if (result.success && result.data) {
+      return result.data;
+    }
+    
+    throw new Error('Invalid response from MongoDB API');
+    
+  } catch (error) {
+    console.error('Error fetching from MongoDB:', error);
+    
+    // Fallback to RapidAPI
+    try {
+      const rapidApiProperty = await realEstateAPI.getPropertyById(id);
+      if (rapidApiProperty) {
+        return rapidApiProperty;
+      }
+    } catch (rapidApiError) {
+      console.error('RapidAPI also failed:', rapidApiError);
+    }
+    
+    // Final fallback to mock data
+    return mockProperties.find(property => property.id === id) || null;
+  }
+}
+
+// API instance
+export const realEstateAPI = new RealEstateAPI();
 
 // Fallback mock data when API is not available
 export const mockProperties: Property[] = [
@@ -330,45 +443,3 @@ export const mockProperties: Property[] = [
     },
   },
 ];
-
-// API instance
-export const realEstateAPI = new RealEstateAPI();
-
-// Helper function to get properties (API first, fallback to mock data)
-export async function getProperties(params: SearchParams = {}): Promise<Property[]> {
-  try {
-    // Try to get real data from API
-    const apiProperties = await realEstateAPI.searchProperties(params);
-    if (apiProperties.length > 0) {
-      return apiProperties;
-    }
-  } catch (error) {
-    console.log('API not available, using mock data');
-  }
-  
-  // Fallback to mock data
-  return mockProperties.filter(property => {
-    if (params.city && !property.address.city.toLowerCase().includes(params.city.toLowerCase())) return false;
-    if (params.state && property.address.state !== params.state) return false;
-    if (params.minPrice && property.financial.listPrice < params.minPrice) return false;
-    if (params.maxPrice && property.financial.listPrice > params.maxPrice) return false;
-    if (params.bedrooms && property.physical.bedrooms < params.bedrooms) return false;
-    if (params.bathrooms && property.physical.bathrooms < params.bathrooms) return false;
-    return true;
-  });
-}
-
-export async function getPropertyById(id: string): Promise<Property | null> {
-  try {
-    // Try to get real data from API
-    const apiProperty = await realEstateAPI.getPropertyById(id);
-    if (apiProperty) {
-      return apiProperty;
-    }
-  } catch (error) {
-    console.log('API not available, using mock data');
-  }
-  
-  // Fallback to mock data
-  return mockProperties.find(property => property.id === id) || null;
-}
