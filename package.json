@@ -1,28 +1,32 @@
 {
-  "name": "major-project",
+  "name": "wanderlust-airbnb-clone",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "A modern Airbnb clone built with Next.js",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "serve": "nodemon app.js"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
   "dependencies": {
-    "connect-flash": "^0.1.1",
-    "ejs": "^3.1.10",
-    "ejs-mate": "^4.0.0",
-    "express": "^4.21.2",
-    "express-session": "^1.18.1",
-    "joi": "^17.13.3",
-    "method-override": "^3.0.0",
-    "mongoose": "^8.13.0",
-    "nodemon": "^3.1.9",
-    "passport": "^0.7.0",
-    "passport-local": "^1.0.0",
-    "passport-local-mongoose": "^8.0.0"
-  }
+    "next": "14.0.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "lucide-react": "^0.294.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.0",
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "autoprefixer": "^10.4.16",
+    "eslint": "^8.55.0",
+    "eslint-config-next": "14.0.4",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.3.6",
+    "typescript": "^5.3.0"
+  },
+  "keywords": ["airbnb", "clone", "nextjs", "wanderlust"],
+  "author": "",
+  "license": "ISC"
 }
